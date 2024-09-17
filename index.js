@@ -5,8 +5,8 @@ const adminData = require("./routes/admin");
 const shopRoute = require("./routes/shop");
 const errorController = require("./controllers/error");
 const sequelize = require("./util/db");
-const ProductModel = require("./models/product");
-const UserModel = require("./models/user");
+const Product = require("./models/product");
+const User = require("./models/user");
 const Cart = require("./models/cart");
 const CartItem = require("./models/cart-item");
 
@@ -17,7 +17,7 @@ app.use(bodyParser.urlencoded());
 
 //** This intercepts the incoming request, always ensure all middleware are declared before route handlers
 app.use((req, res, next) => {
-  UserModel.findByPk(3)
+  User.findByPk(1)
     .then((user) => {
       req.user = user;
       next();
@@ -45,27 +45,28 @@ app.use(errorController.get404);
 // ** The code below will not overide the existing data unless we set {force: true} on the sync method.
 
 //! Only do this in developement {force: true}
-ProductModel.belongsTo(UserModel, {
+Product.belongsTo(User, {
   constraints: true,
   onDelete: "CASCADE",
 });
-UserModel.hasMany(ProductModel);
-UserModel.hasOne(Cart);
-Cart.belongsToMany(ProductModel, { through: CartItem });
-ProductModel.belongsToMany(Cart, { through: CartItem });
+User.hasMany(Product);
+User.hasOne(Cart);
+Cart.belongsTo(User);
+Cart.belongsToMany(Product, { through: CartItem });
+Product.belongsToMany(Cart, { through: CartItem });
 
 //** I add a second argument to belongs to many and there we add the through keep telling sequelize where these connection should be stored and that is my cart item model, so I'll add that to both belongs to many calls here.
 
 // ! This will sync your model to database by creating appropriate tables for them
 sequelize
-  // .sync()
-  .sync({ force: true })
+  // .sync({ force: true })
+  .sync()
   .then((res) => {
-    return UserModel.findByPk(3);
+    return User.findByPk(1);
   })
   .then((user) => {
     if (!user) {
-      return UserModel.create({
+      return User.create({
         name: "Mubarak",
         email: "Mubarak@gmail.com",
       });
@@ -73,6 +74,9 @@ sequelize
     return user;
   })
   .then((user) => {
+    return user.createCart();
+  })
+  .then((cart) => {
     app.listen(8080);
   })
   .catch((err) => {
